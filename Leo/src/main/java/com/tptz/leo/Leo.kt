@@ -65,13 +65,20 @@ fun handleOffline(
     listener: OnRefreshListener? = null
 ) {
     leoAdapter?.offlineView(listener)?.let { offlineView ->
-        viewGroup.children.forEach {
-            it.visibility = View.GONE
+        var parent = viewGroup
+        if (parent is RecyclerView) {
+            parent.visibility = View.GONE
+            parent = parent.parent as ViewGroup
+            // todo parent.indexOfChild(parent)
+        } else {
+            parent.children.forEach {
+                it.visibility = View.GONE
+            }
         }
 
-        viewGroup.findViewById<View?>(R.id.root_offline_view)?.let {
+        parent.findViewById<View?>(R.id.root_offline_view)?.let {
             viewGroup.removeView(it)
         }
-        viewGroup.addView(offlineView)
+        parent.addView(offlineView)
     }
 }
