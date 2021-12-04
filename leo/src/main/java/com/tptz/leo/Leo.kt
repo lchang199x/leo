@@ -1,14 +1,14 @@
 package com.tptz.leo
 
+import android.util.Log
+import android.util.LruCache
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup.LayoutParams
 import androidx.annotation.DrawableRes
-import androidx.annotation.IdRes
-import androidx.core.view.children
-import androidx.recyclerview.widget.RecyclerView
+import java.lang.ref.WeakReference
 
 var leoAdapter: LeoAdapter? = null
+val cachedViews = LruCache<String, WeakReference<View>>(8)
 
 class Leo {
     companion object {
@@ -20,10 +20,18 @@ class Leo {
 
 fun handleLoading(
     viewGroup: ViewGroup
-) =
-    leoAdapter?.loadingView()?.let {
-        handleLeo(viewGroup, R.id.root_loading_view, it)
+) {
+    val key = "loading_view"
+    var loadingView = cachedViews[key]?.get()
+    if (loadingView == null) {
+        loadingView = leoAdapter?.loadingView()
+        cachedViews.put(key, WeakReference(loadingView))
     }
+
+    loadingView?.let {
+        handleLeo(viewGroup, it)
+    }
+}
 
 fun handleEmpty(
     viewGroup: ViewGroup,
@@ -31,35 +39,55 @@ fun handleEmpty(
     @DrawableRes
     resId: Int = -1,
     listener: OnRefreshListener? = null
-) =
-    leoAdapter?.emptyView(tips, resId, listener)?.let {
-        handleLeo(viewGroup, R.id.root_empty_view, it)
+) {
+    val key = StringBuilder("empty_view").run {
+        if (!tips.isNullOrBlank()) append("_$tips")
+        if (resId != -1) append("_$resId")
+        if (listener != null) append("_${listener.hashCode()}")
+        toString()
     }
+
+    var emptyView = cachedViews[key]?.get()
+    if (emptyView == null) {
+        emptyView = leoAdapter?.emptyView(tips, resId, listener)
+        cachedViews.put(key, WeakReference(emptyView))
+    }
+
+    emptyView?.let {
+        handleLeo(viewGroup, it)
+    }
+}
 
 fun handleOffline(
     viewGroup: ViewGroup,
     listener: OnRefreshListener? = null
-) =
-    leoAdapter?.offlineView(listener)?.let {
-        handleLeo(viewGroup, R.id.root_offline_view, it)
+) {
+    val key = StringBuilder("offline_view").run {
+        if (listener != null) append("_${listener.hashCode()}")
+        toString()
+    }
+    var offlineView = cachedViews[key]?.get()
+    if (offlineView == null) {
+        offlineView = leoAdapter?.offlineView(listener)
+        cachedViews.put(key, WeakReference(offlineView))
     }
 
-private fun handleLeo(viewGroup: ViewGroup, @IdRes id: Int, view: View) {
-    var parent = viewGroup
-    if (parent is RecyclerView) {
-        parent.visibility = View.GONE
-        parent = parent.parent as ViewGroup
-        parent.findViewById<View?>(id)?.let {
-            parent.removeView(it)
+    offlineView?.let {
+        handleLeo(viewGroup, it)
+    }
+}
+
+private fun handleLeo(viewGroup: ViewGroup, view: View) {
+    try {
+        viewGroup.visibility = View.GONE
+        val parent = viewGroup.parent as ViewGroup
+        cachedViews.snapshot().values.forEach {
+            it.get()?.let { view ->
+                parent.removeView(view)
+            }
         }
         parent.addView(view, viewGroup.layoutParams)
-    } else {
-        parent.children.forEach {
-            it.visibility = View.GONE
-        }
-        parent.findViewById<View?>(id)?.let {
-            parent.removeView(it)
-        }
-        parent.addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+    } catch (e: Throwable) {
+        Log.e("Leo", "Unable to add the abnormal layout to view hierarchy.", e)
     }
 }
