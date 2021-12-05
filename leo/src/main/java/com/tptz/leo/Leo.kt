@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import java.lang.ref.WeakReference
+import com.tptz.leo.LeoAdapter.OnRefreshListener
 
 var leoAdapter: LeoAdapter? = null
 val cachedViews = LruCache<String, WeakReference<View>>(8)

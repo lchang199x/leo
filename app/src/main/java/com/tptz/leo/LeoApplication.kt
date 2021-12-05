@@ -4,6 +4,7 @@ import android.app.Application
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import com.tptz.leo.LeoAdapter.OnRefreshListener
 
 /**
  * @author Created by Chang Liu on 2021/11/22
