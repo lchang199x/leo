@@ -14,8 +14,8 @@ interface LeoAdapter {
     ): View?
 
     fun offlineView(listener: OnRefreshListener?): View?
-}
 
-interface OnRefreshListener {
-    fun onRefresh()
+    fun interface OnRefreshListener {
+        fun onRefresh()
+    }
 }
